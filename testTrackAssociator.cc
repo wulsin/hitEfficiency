@@ -48,6 +48,8 @@
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
 // End Copied from TrackProducer.cc:  
 
+#include "DataFormats/GeometrySurface/interface/TrapezoidalPlaneBounds.h" 
+#include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"  
 
 #include <memory>
 #include <iostream>
