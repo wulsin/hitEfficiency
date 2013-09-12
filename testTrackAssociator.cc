@@ -686,8 +686,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 
 	  if (isMissOut) {  
 	    nHitMissOut++;  
-	    if (isMissOut) {
-	    //	    if (isMissOutFirst) {
+	    if (isMissOutFirst) {
 	    // if (isMissOutFirst && layerSim==5
 	    //    	&& fabs(getGlobalPos(simHits.at(ihit)).z())>60) {
 	    // if (isMissOutFirst && layerSim==5
