@@ -30,7 +30,4 @@
 <library   file="testTrackAssociator.cc" name="testTrackAssociator">
   <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="testClusterToSimTrack.cc" name="testClusterToSimTrack">
-  <flags   EDM_PLUGIN="1"/>
-</library>
 
