@@ -25,7 +25,7 @@ process.GlobalTag.globaltag = 'DESIGN53_V15::All'
 
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(10000))
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV1/CMSSW_5_3_8_patch1/src/simTestMaskHits/H200ZZ4L_cfi_py_RAW2DIGI_RECO.root'
@@ -137,18 +137,6 @@ process.TFileService = cms.Service("TFileService",
 )
 
  
-
-process.TTRHBuilderAngleAndTemplate.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.myTTRHBuilderWithoutAngle.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.myTTRHBuilderWithoutAngle4MixedPairs.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.myTTRHBuilderWithoutAngle4MixedTriplets.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.myTTRHBuilderWithoutAngle4PixelPairs.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.myTTRHBuilderWithoutAngle4PixelTriplets.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.myTTRHBuilderWithoutAngle4PixelTriplets.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.ttrhbwor.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-process.ttrhbwr.ComputeCoarseLocalPositionFromDisk = cms.bool(True)
-
-
 
 #process.p = cms.Path(process.TrackRefitter + process.demo)
 #process.p = cms.Path(process.TrackRefitter + process.demo + process.TrackAssoc)
