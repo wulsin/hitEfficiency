@@ -1,6 +1,6 @@
 # Usage:
 # /afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV1/CMSSW_5_3_8_patch1/src/Demo/DemoTrackAnalyzer/test> 
-# cmsRun DemoTrackAnalyzer_cfg.py 2>&1 | tee DemoTrackAnalyzer_cfg.log
+# cmsRun testTrackAssociator_cfg.py 2>&1 | tee testTrackAssociator_cfg.log  
 
 import FWCore.ParameterSet.Config as cms
 import os
@@ -25,7 +25,7 @@ process.GlobalTag.globaltag = 'DESIGN53_V15::All'
 
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(10000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(10))
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV1/CMSSW_5_3_8_patch1/src/simTestMaskHits/H200ZZ4L_cfi_py_RAW2DIGI_RECO.root'
@@ -39,8 +39,10 @@ process.source = cms.Source("PoolSource",
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGunSimShift/SingleMuPt100_cfi_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_Shift.root',
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGunShift/SingleMuPt100_cfi_py_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO.root'
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_20.root', 
+        #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_new.root',
         )  
     )  
+
 
 dir = '/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/'
 for file in os.listdir(dir):

@@ -16,6 +16,8 @@
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 
 #include "DataFormats/SiStripCluster/interface/SiStripCluster.h"  
+#include "DataFormats/TrackerRecHit2D/interface/SiStripRecHit2D.h"  
+
 #include "DataFormats/Common/interface/DetSetVectorNew.h"
 
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -53,6 +55,17 @@ class testTrackAssociator : public edm::EDAnalyzer {
 
   edm::ESHandle<TrackerGeometry> theG;
   edm::Handle<edmNew::DetSetVector<SiStripCluster> >  clusterStrip;
+  edm::Handle<edmNew::DetSetVector<SiStripRecHit2D> >  rphiRecHits;
+  edm::Handle<edmNew::DetSetVector<SiStripRecHit2D> >  rphiRecHitsUnmatched;
+  edm::Handle<edmNew::DetSetVector<SiStripRecHit2D> >  stereoRecHits;
+  edm::Handle<edmNew::DetSetVector<SiStripRecHit2D> >  stereoRecHitsUnmatched;
+
+  //  edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "rphiRecHit"      "HLT"     
+    /* edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "rphiRecHitUnmatched"   "HLT"      */
+    /* edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "stereoRecHit"    "HLT"      */
+    /* edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "stereoRecHitUnmatched"   "HLT"      */
+    
+
 
   virtual void beginJob() ;
   virtual void endJob() ;
@@ -120,6 +133,8 @@ class testTrackAssociator : public edm::EDAnalyzer {
   bool getIsGlued(unsigned int rawId);  
 
   bool isClusOnModule(unsigned int rawId);  
+  bool isRecHitOnModule(unsigned int rawId);  
+
 
   int sgn(double x) { if (x >= 0) return 1; else return -1;  }  
 
@@ -137,6 +152,7 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TH1D* hNSimHitNRec;
   TH1D* hNSimHitMissOut;  
   TH1D* hNRecoMissOut;  
+  TH1D* hNRecoMissMid;  
   TH1D* hNRecoSimDiffMissOut;  
   TH1D* hNSimHitMissOutFirst; 
   TH1D* hNSimHitMissMid; 
@@ -166,10 +182,16 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TH1D* hDistXLayNotMod_PerpFar;
   TH1D* hDistYLayNotMod_PerpFar; 
   TH2D* hDistXYLayNotMod_PerpFar; 
+  TH2D* hDistXYLayNotMod_PerpNearTIB;
+  TH2D* hDistXYLayNotMod_PerpFarTIB; 
+  TH2D* hDistXYLayNotMod_PerpNearTOB;
+  TH2D* hDistXYLayNotMod_PerpFarTOB; 
+  
   TH2D* hDistXYNotLay;  
   TH2D* hDistXYMissOut;  
 
   TH1D* hTrkEta;
+  TH1D* hTrkPt;  
   TH1D* hTrkDistRecSimRecMod;
   TH1D* hTrkDistRecSimRecLay;
   TH1D* hTrkDistRecSimRecLayNotMod;
@@ -203,7 +225,9 @@ class testTrackAssociator : public edm::EDAnalyzer {
 
   TH2D* hPosSimVtx;  
   TH2D* hPosAll;  
+  TH2D* hPosRecMod;  
   TH2D* hPosAllXY; 
+  TH2D* hPosRecModXY; 
   TH2D* hPosMissOut;  
 
   TH1D* hELossRecMod;          

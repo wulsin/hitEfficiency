@@ -81,6 +81,7 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   // hNSimHitNRec = fs->make<TH1D>("numSimHitsNRec",";Num. sim hits not matched to rechit",30,0,30);  
   hNSimHitMissOut = fs->make<TH1D>("numSimHitMissOut",";Num. sim hits that give missing outer hits;tracks",11,-0.5,10.5);  
   hNRecoMissOut   = fs->make<TH1D>("hNRecoMissOut",";Num. missing outer hits from reco;tracks",11,-0.5,10.5);  
+  hNRecoMissMid   = fs->make<TH1D>("hNRecoMissMid",";Num. missing middle hits from reco;tracks",11,-0.5,10.5);  
   hNRecoSimDiffMissOut   = fs->make<TH1D>("hNRecoSimDiffMissOut",";Num. missing outer hits from reco - Num from sim counting;tracks",11,-5.5,5.5);  
   hNSimHitMissOutFirst = fs->make<TH1D>("numSimHitMissOutFirst",";Num. sim hits that give the first missing outer hit;tracks",6,-0.5,5.5);  
   hNSimHitMissMid = fs->make<TH1D>("numSimHitMissMid",";Num. sim hits that give missing middle hits;tracks",30,0,30);  
@@ -104,17 +105,23 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
 
   hDistXLayNotMod_PerpNear = fs->make<TH1D>("hDistXLayNotMod_PerpNear",";x local pos. (norm)",100, -1.5, 1.5);  
   hDistYLayNotMod_PerpNear = fs->make<TH1D>("hDistYLayNotMod_PerpNear",";y local pos. (norm)",100, -1.5, 1.5);  
-  hDistXYLayNotMod_PerpNear = fs->make<TH2D>("hDistXYLayNotMod_PerpNear",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
   hDistXLayNotMod_PerpFar  = fs->make<TH1D>("hDistXLayNotMod_PerpFar",";x local pos. (norm)",100, -1.5, 1.5);  
   hDistYLayNotMod_PerpFar  = fs->make<TH1D>("hDistYLayNotMod_PerpFar",";y local pos. (norm)",100, -1.5, 1.5);  
-  hDistXYLayNotMod_PerpFar = fs->make<TH2D>("hDistXYLayNotMod_PerpFar",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_PerpNear = fs->make<TH2D>("hDistXYLayNotMod_PerpNear",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_PerpFar  = fs->make<TH2D>("hDistXYLayNotMod_PerpFar",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_PerpNearTIB = fs->make<TH2D>("hDistXYLayNotMod_PerpNearTIB",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_PerpFarTIB  = fs->make<TH2D>("hDistXYLayNotMod_PerpFarTIB",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_PerpNearTOB = fs->make<TH2D>("hDistXYLayNotMod_PerpNearTOB",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_PerpFarTOB  = fs->make<TH2D>("hDistXYLayNotMod_PerpFarTOB",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
   hDistXYNotLay            = fs->make<TH2D>("hDistXYNotLay",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
   hDistXYMissOut          = fs->make<TH2D>("hDistXYMissOut",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
 
   hPosSimVtx          = fs->make<TH2D>("hPosSimVtx",";z position (sim vertices);radius",100, -300, 300, 1000, 0, 120);    
   hPosAll             = fs->make<TH2D>("hPosAll",   ";z position (sim hits);radius"    ,100, -300, 300, 1000, 0, 120);    
+  hPosRecMod          = fs->make<TH2D>("hPosRecMod", ";z position (sim hits);radius"    ,100, -300, 300, 1000, 0, 120);    
   //  hPosAll             = fs->make<TH2D>("hPosAll",   ";z position (sim hits);radius", 500, -150, 150, 500, 105, 115);    
   hPosAllXY           = fs->make<TH2D>("hPosAllXY", ";x position (sim hits);y position" ,500, -120, 120, 500, -120, 120);  
+  hPosRecModXY        = fs->make<TH2D>("hPosRecModXY", ";x position (sim hits);y position" ,500, -120, 120, 500, -120, 120);  
   hPosMissOut         = fs->make<TH2D>("hPosMissOut",";z position (missing outer hits);radius"    ,100, -300, 300, 1000, 0, 120);    
   //  hPosMissOut         = fs->make<TH2D>("hPosMissOut",";z position (missing outer hits);radius", 500, -150, 150, 500, 105, 115);    
 
@@ -137,6 +144,7 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   // hPdgRecHits = new TH1D("hPdgRecHits",";PDG ID of sim hit with associated rec hit",100,-50, 50);  
 
   hTrkEta                    = fs->make<TH1D>("hTrkEta",";#eta;tracks",100, -3, 3);  
+  hTrkPt                     = fs->make<TH1D>("hTrkEta",";p_{T} (GeV);tracks",100, 50, 150);  
   hTrkDistRecSimRecMod       = fs->make<TH1D>("hTrkDistRecSimRecMod",      ";dist (sim hit-rec hit), (rec hit on same module) (cm)",100, 0, 6);  
   hTrkDistRecSimRecLay       = fs->make<TH1D>("hTrkDistRecSimRecLay",      ";dist (sim hit-rec hit), (rec hit on same layer) (cm)",100, 0, 6);  
   hTrkDistRecSimRecLayNotMod = fs->make<TH1D>("hTrkDistRecSimRecLayNotMod",";dist (sim hit-rec hit), (rec hit on same layer, not module) (cm)",100, 0, 5);  
@@ -230,7 +238,17 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   setup.get<TrackerDigiGeometryRecord>().get(theG);
   
   event.getByLabel("siStripClusters", clusterStrip);
-  
+
+  event.getByLabel("siStripMatchedRecHits", "rphiRecHit",            rphiRecHits);
+  event.getByLabel("siStripMatchedRecHits", "rphiRecHitUnmatched",   rphiRecHitsUnmatched);
+  event.getByLabel("siStripMatchedRecHits", "stereoRecHit",          stereoRecHits);
+  event.getByLabel("siStripMatchedRecHits", "stereoRecHitUnmatched", stereoRecHitsUnmatched);
+
+  // edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "rphiRecHit"      "HLT"     
+  //   edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "rphiRecHitUnmatched"   "HLT"     
+  //   edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "stereoRecHit"    "HLT"     
+  //   edmNew::DetSetVector<SiStripRecHit2D>    "siStripMatchedRecHits"     "stereoRecHitUnmatched"   "HLT"     
+    
 
   cout << "\nEvent ID = "<< event.id() << endl ;
 
@@ -575,9 +593,11 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	}
 
 	hTrkEta->Fill(tp->eta());  
+	hTrkPt ->Fill(tp->eta());  
 
 	vector<PSimHit> simHits = tp->trackPSimHit();  
 	int nHitMissOutReco = tr->trackerExpectedHitsOuter().numberOfHits();  
+	int nHitMissMidReco = tr->hitPattern().trackerLayersWithoutMeasurement();   
 	int nSimHit = 0;  
 	int nHitPix = 0;  
 	int nHitMissOut = 0;  
@@ -610,7 +630,8 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	  bool foundMatchLay = false;  	    
 	  int layerSim = getLayerHit(detid.rawId());  
 	  bool isGlued = getIsGlued(simHits.at(ihit).detUnitId());  
-	  bool isClusOnMod = isClusOnModule(simHits.at(ihit).detUnitId());  
+	  bool isClusOnMod   =   isClusOnModule(simHits.at(ihit).detUnitId());  
+	  bool isRecHitOnMod = isRecHitOnModule(simHits.at(ihit).detUnitId());  
 	  for(trackingRecHit_iterator iter = tr->recHitsBegin(); 
 	      iter != tr->recHitsEnd(); iter++) {
 	    if (!(*iter)->isValid()) continue;	      
@@ -645,6 +666,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	       << ", layer=" << getLayerHit(detid.rawId())  
 	       << ", isMissOut=" << isMissOut  
 	       << ", isClus=" << isClusOnMod
+	       << ", isRecHitOnMod=" << isRecHitOnMod  
 	       << ", isGlued=" << isGlued  
 	       << endl; 
 
@@ -733,8 +755,12 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	      nSimHitMatchMod++;
 	      hTrkDistRecSimRecMod->Fill(distSimToRec);  
 	      hLayerRecMod      ->Fill(layerSim, detid.subdetId());  
-	      hELossRecMod->Fill(energyLoss);           
-	    }  
+	      hELossRecMod->Fill(energyLoss);        
+	      hPosRecMod->Fill(getGlobalPos(simHits.at(ihit)).z(), 
+			       getGlobalPos(simHits.at(ihit)).perp());  
+	      hPosRecModXY->Fill(getGlobalPos(simHits.at(ihit)).x(), 
+				 getGlobalPos(simHits.at(ihit)).y());  
+   	    }  
 	    if (foundMatchLay) { 
 	      nSimHitMatchLay++;  
 	      hTrkDistRecSimRecLay->Fill(distSimToRec);  
@@ -794,12 +820,16 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 		hDistXLayNotMod_PerpNear->Fill(distEdgeXNorm);  
 		hDistYLayNotMod_PerpNear->Fill(distEdgeYNorm);  
 		hDistXYLayNotMod_PerpNear->Fill(distEdgeXNorm, distEdgeYNorm);  
+		if (layerSim==3) hDistXYLayNotMod_PerpNearTIB->Fill(distEdgeXNorm, distEdgeYNorm);  
+		if (layerSim==5) hDistXYLayNotMod_PerpNearTOB->Fill(distEdgeXNorm, distEdgeYNorm);  
 	      } else {
 		hTrkDPerpRecSimRecLayNotMod_PerpFar->Fill(distPerpSimToRec);  
 		hLayerRecLayNotMod_PerpFar->Fill(layerSim, detid.subdetId());  
 		hDistXLayNotMod_PerpFar->Fill(distEdgeXNorm);  
 		hDistYLayNotMod_PerpFar->Fill(distEdgeYNorm);  
 		hDistXYLayNotMod_PerpFar->Fill(distEdgeXNorm, distEdgeYNorm);  
+		if (layerSim==3) hDistXYLayNotMod_PerpFarTIB->Fill(distEdgeXNorm, distEdgeYNorm);  
+		if (layerSim==5) hDistXYLayNotMod_PerpFarTOB->Fill(distEdgeXNorm, distEdgeYNorm);  
 	      }
 	    }
 	  } // end else from (isMissOut)  
@@ -826,6 +856,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	//	hNSimHitNRec->Fill(nSimHit - nSimHitMatchMod);
 	hNSimHitMissOut->Fill(nHitMissOut); 	  
 	hNRecoMissOut->Fill(nHitMissOutReco);  
+	hNRecoMissMid->Fill(nHitMissMidReco);  
 	hNRecoSimDiffMissOut->Fill(nHitMissOutReco - nHitMissOut);  
 	hNSimHitMissOutFirst->Fill(nHitMissOutFirst); 	  
 	hNSimHitMissMid       ->Fill(nSimHit - nSimHitMatchMod); 	  
@@ -1133,14 +1164,23 @@ int testTrackAssociator::getSubDet(unsigned int rawId) {
 
 bool testTrackAssociator::isClusOnModule(unsigned int rawId) {
   for (edmNew::DetSetVector<SiStripCluster>::const_iterator itreco = clusterStrip->begin(); itreco != clusterStrip->end(); ++itreco) {
-    edmNew::DetSet<SiStripCluster> detset = *itreco;        
-    if (detset.detId() == rawId) return true;
+    // edmNew::DetSet<SiStripCluster> detset = *itreco;        
+    // if (detset.detId() == rawId) return true;
+    if ((*itreco).detId() == rawId) return true;
   }
   return false;
 
 }  
 
+bool testTrackAssociator::isRecHitOnModule(unsigned int rawId) {
+  // Return true if there is a rec hit on the given module  
+  for (edmNew::DetSetVector<SiStripRecHit2D>::const_iterator itreco = rphiRecHits->begin();            itreco != rphiRecHits->end();            ++itreco) { if ((*itreco).detId() == rawId) return true; }  
+  for (edmNew::DetSetVector<SiStripRecHit2D>::const_iterator itreco = rphiRecHitsUnmatched->begin();   itreco != rphiRecHitsUnmatched->end();   ++itreco) { if ((*itreco).detId() == rawId) return true; }  
+  for (edmNew::DetSetVector<SiStripRecHit2D>::const_iterator itreco = stereoRecHits->begin();          itreco != stereoRecHits->end();          ++itreco) { if ((*itreco).detId() == rawId) return true; }  
+  for (edmNew::DetSetVector<SiStripRecHit2D>::const_iterator itreco = stereoRecHitsUnmatched->begin(); itreco != stereoRecHitsUnmatched->end(); ++itreco) { if ((*itreco).detId() == rawId) return true; }  
+  return false;
 
+}  
 
 // ------------ method called once each job just before starting event loop  ------------
 void
