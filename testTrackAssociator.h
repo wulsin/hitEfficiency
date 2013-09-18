@@ -25,6 +25,7 @@
 #include <TFile.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TStopwatch.h>
 
 #include <iostream>
 #include <string>
@@ -49,6 +50,7 @@ class testTrackAssociator : public edm::EDAnalyzer {
   int getSubDet(unsigned int rawId);  
 
  private:
+  TStopwatch* timer;  
   TrackAssociatorBase * associatorByChi2;
   TrackAssociatorBase * associatorByHits;
   edm::InputTag tracksTag, tpTag, simtracksTag, simvtxTag;
@@ -77,6 +79,12 @@ class testTrackAssociator : public edm::EDAnalyzer {
   /*   double eta; */
   /*   double phi;   */
   /* }; */
+
+  struct HitSubdetLay {
+    int subdet;
+    int layer;  
+  };  
+
 
   struct RecHitInfo {
     // info about a rec hit
@@ -122,6 +130,8 @@ class testTrackAssociator : public edm::EDAnalyzer {
   bool isMissOutHitByMod(const vector<PSimHit>& simHits, uint ihit, const vector<unsigned int>& recHits);  
   bool isMissOutHit     (const vector<PSimHit>& simHits, uint idxhit, const reco::Track tr);
   bool isMissOutHitFirst(const vector<PSimHit>& simHits, uint idxhit, const reco::Track tr);
+  bool isFoundSim       (const vector<PSimHit>& simHits, int subdet, int layer);  
+  bool isMissSimPrevLay (const vector<PSimHit>& simHits, uint idxhit);  
 
 
   bool isMatchedToRecHitbyLayer(PSimHit& simHit, const vector<TrackAndHits>& trkRecHits);  
@@ -134,6 +144,8 @@ class testTrackAssociator : public edm::EDAnalyzer {
 
   bool isClusOnModule(unsigned int rawId);  
   bool isRecHitOnModule(unsigned int rawId);  
+  int getCountSubdetLay(const vector<HitSubdetLay>& simhits, int subdet, int layer);  
+  int getNExtraSimHits (const vector<HitSubdetLay>& simhits);  
 
 
   int sgn(double x) { if (x >= 0) return 1; else return -1;  }  
@@ -155,7 +167,9 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TH1D* hNRecoMissMid;  
   TH1D* hNRecoSimDiffMissOut;  
   TH1D* hNSimHitMissOutFirst; 
+  TH1D* hNSimHitMissOutFirstMissPrevSim;  
   TH1D* hNSimHitMissMid; 
+  TH1D* hNExtraSimHits;  
   TH1D* hNPixHit; 
   TH1D* hPdgRecHits;  
   TH1D* hELossRec;
@@ -186,7 +200,8 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TH2D* hDistXYLayNotMod_PerpFarTIB; 
   TH2D* hDistXYLayNotMod_PerpNearTOB;
   TH2D* hDistXYLayNotMod_PerpFarTOB; 
-  
+  TH2D* hDistXYLayNotMod_NoRecHitOnMod;  
+
   TH2D* hDistXYNotLay;  
   TH2D* hDistXYMissOut;  
 
@@ -222,6 +237,9 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TH2D* hLayerMissOut;  
   TH2D* hLayerMissOut_YPos;  
   TH2D* hLayerMissOut_YNeg;  
+
+  TH2D* hNSimHitsVsLayerTIB;  
+  TH2D* hNSimHitsVsLayerTOB;  
 
   TH2D* hPosSimVtx;  
   TH2D* hPosAll;  

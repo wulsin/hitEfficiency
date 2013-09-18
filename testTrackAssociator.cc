@@ -70,6 +70,9 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   simtracksTag = conf.getParameter< edm::InputTag >("simtracksTag");
   simvtxTag = conf.getParameter< edm::InputTag >("simvtxTag");
 
+  timer = new TStopwatch();  
+  timer->Start();  
+
   //now do what ever initialization is needed
   edm::Service<TFileService> fs;
 
@@ -84,14 +87,15 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   hNRecoMissMid   = fs->make<TH1D>("hNRecoMissMid",";Num. missing middle hits from reco;tracks",11,-0.5,10.5);  
   hNRecoSimDiffMissOut   = fs->make<TH1D>("hNRecoSimDiffMissOut",";Num. missing outer hits from reco - Num from sim counting;tracks",11,-5.5,5.5);  
   hNSimHitMissOutFirst = fs->make<TH1D>("numSimHitMissOutFirst",";Num. sim hits that give the first missing outer hit;tracks",6,-0.5,5.5);  
-  hNSimHitMissMid = fs->make<TH1D>("numSimHitMissMid",";Num. sim hits that give missing middle hits;tracks",30,0,30);  
+  hNSimHitMissOutFirstMissPrevSim = fs->make<TH1D>("numSimHitMissOutFirstMissPrevSim",";Num. sim hits that give the first missing outer hit and miss the prev. sim hit;tracks",6,-0.5,5.5);  
+  hNSimHitMissMid = fs->make<TH1D>("numSimHitMissMid",";Num. sim hits that give missing middle hits;tracks",30,0,15);  
+  hNExtraSimHits = fs->make<TH1D>("hNExtraSimHits",";Num. extra sim hits by layer;tracks",15,0,15);  
   hNSimHitMissMidByLayer = fs->make<TH1D>("numSimHitMissMidByLayer",";Num. sim hits that give missing middle hits, matched by layer;tracks",30,0,30);  
   // hSubDetMid    = fs->make<TH1D>("hSubDetMid",";subdetector of sim hits that give missing middle hits",30,0,30);  
   hNPixHit = fs->make<TH1D>("hNPixHit",";Num. pixel rec hits;tracks",30,0,30);  
 
 
   //  hELossRec   = fs->make<TH1D>("hELossRec",";#DeltaE (sim hits with rec hit)",100,0,1e-3);  
-  hELossNRecOut  = fs->make<TH1D>("hELossNRec",";#DeltaE (sim hit that gives missing outer hit);hits",100,0,1e-3);  
   // hELossRecMid   = fs->make<TH1D>("hELossRecMid",";#DeltaE (sim hits that have middle rec hits, matched by module)",100,0,1e-3);  
   // hELossNRecMid  = fs->make<TH1D>("hELossNRecMid",";#DeltaE (sim hits that give missing middle hit, matched by module)",100,0,1e-3);  
   // hELossRecMidLayer   = fs->make<TH1D>("hELossRecMidLayer",";#DeltaE (sim hits that have middle rec hits, matched by layer)",100,0,1e-3);  
@@ -115,6 +119,9 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   hDistXYLayNotMod_PerpFarTOB  = fs->make<TH2D>("hDistXYLayNotMod_PerpFarTOB",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
   hDistXYNotLay            = fs->make<TH2D>("hDistXYNotLay",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
   hDistXYMissOut          = fs->make<TH2D>("hDistXYMissOut",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+  hDistXYLayNotMod_NoRecHitOnMod   = fs->make<TH2D>("hDistXYLayNotMod_NoRecHitOnMod",";x local pos. (norm);y local pos. (norm)",100, -1.5, 1.5, 100, -1.5, 1.5);  
+
+
 
   hPosSimVtx          = fs->make<TH2D>("hPosSimVtx",";z position (sim vertices);radius",100, -300, 300, 1000, 0, 120);    
   hPosAll             = fs->make<TH2D>("hPosAll",   ";z position (sim hits);radius"    ,100, -300, 300, 1000, 0, 120);    
@@ -144,7 +151,7 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   // hPdgRecHits = new TH1D("hPdgRecHits",";PDG ID of sim hit with associated rec hit",100,-50, 50);  
 
   hTrkEta                    = fs->make<TH1D>("hTrkEta",";#eta;tracks",100, -3, 3);  
-  hTrkPt                     = fs->make<TH1D>("hTrkEta",";p_{T} (GeV);tracks",100, 50, 150);  
+  hTrkPt                     = fs->make<TH1D>("hTrkPt", ";p_{T} (GeV);tracks",100, 50, 150);  
   hTrkDistRecSimRecMod       = fs->make<TH1D>("hTrkDistRecSimRecMod",      ";dist (sim hit-rec hit), (rec hit on same module) (cm)",100, 0, 6);  
   hTrkDistRecSimRecLay       = fs->make<TH1D>("hTrkDistRecSimRecLay",      ";dist (sim hit-rec hit), (rec hit on same layer) (cm)",100, 0, 6);  
   hTrkDistRecSimRecLayNotMod = fs->make<TH1D>("hTrkDistRecSimRecLayNotMod",";dist (sim hit-rec hit), (rec hit on same layer, not module) (cm)",100, 0, 5);  
@@ -175,12 +182,17 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   hLayerMissOut_YPos  = fs->make<TH2D>("hLayerMissOut_YPos",";layer (missing outer hit);subdet (TIB=3, TID=4, TOB=5, TEC=6)",10, -0.5, 9.5, 4, 2.5, 6.5);  
   hLayerMissOut_YNeg  = fs->make<TH2D>("hLayerMissOut_YNeg",";layer (missing outer hit);subdet (TIB=3, TID=4, TOB=5, TEC=6)",10, -0.5, 9.5, 4, 2.5, 6.5);  
 
+  hNSimHitsVsLayerTIB  = fs->make<TH2D>("hNSimHitsVsLayerTIB",";layer (TIB);number of sim hits",10, -0.5, 9.5, 7, -0.5, 6.5);  
+  hNSimHitsVsLayerTOB  = fs->make<TH2D>("hNSimHitsVsLayerTOB",";layer (TOB);number of sim hits",10, -0.5, 9.5, 7, -0.5, 6.5);  
+
+
   hTestYDir = fs->make<TH2D>("hTestYDir",";z global position;#vec{y}_{local}#bullet#vec{z}_{global}", 100, -150, 150, 50, -2.5, 2.5);
 
 
 
 
 
+  hELossNRecOut           = fs->make<TH1D>("hELossNRec",";#DeltaE (sim hit that gives first missing outer hit);hits",100,0,1e-3);  
   hELossRecMod            = fs->make<TH1D>("hELossRecMod",      ";#DeltaE (rec hit on same module)",100,0,1e-3);  
   hELossRecRecLay         = fs->make<TH1D>("hELossRecLay      ",";#DeltaE (rec hit on same layer)",100,0,1e-3);  
   hELossRecRecLayNotMod   = fs->make<TH1D>("hELossRecLayNotMod",";#DeltaE (rec hit on same layer, not module)",100,0,1e-3);  
@@ -197,6 +209,9 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
 }
 
 testTrackAssociator::~testTrackAssociator() {
+  timer->Print();  
+  cout << "Finished testTrackAssociator successfully." << endl;  
+
 
 }
 
@@ -568,7 +583,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	   << " pT: "  << setw(6) << tp->pt() 
 	   << " eta: " << tp->eta() 
 	   << " phi: " << tp->phi() 
-	   <<  " matched to " << trackV.size() << " reco::Tracks" << std::endl;  
+	   << " matched to " << trackV.size() << " reco::Tracks" << std::endl;  
       for (std::vector<std::pair<RefToBase<Track>,double> >::const_iterator it=trackV.begin(); it != trackV.end(); ++it) {
 	RefToBase<Track> tr = it->first;
 	double assocChi2 = it->second;
@@ -593,7 +608,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	}
 
 	hTrkEta->Fill(tp->eta());  
-	hTrkPt ->Fill(tp->eta());  
+	hTrkPt ->Fill(tp->pt());  
 
 	vector<PSimHit> simHits = tp->trackPSimHit();  
 	int nHitMissOutReco = tr->trackerExpectedHitsOuter().numberOfHits();  
@@ -602,6 +617,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	int nHitPix = 0;  
 	int nHitMissOut = 0;  
 	int nHitMissOutFirst = 0;  
+	int nHitMissOutFirstMissPrevSim = 0;  
 	int nSimHitMatchMod = 0;  
 	int nSimHitMatchLay = 0;  
 	int nSimHitMatchLayNotMod = 0;  
@@ -612,6 +628,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   // 	  int nHitMissMidByLayer = 0;  
   // 	  int nHitNotMissMidByLayer = 0;  
 
+	vector<HitSubdetLay> simHitSubdetLay;  
 	cout << "  Sim hits:  (total number: " << simHits.size() << ")" << endl;  
 
 	for (uint ihit=0; ihit<simHits.size(); ihit++) {  
@@ -624,6 +641,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	  if (detid.subdetId()>6) continue;  // only consider strip tracker hits
 	  bool isMissOut      = isMissOutHit     (simHits, ihit, (*tr));   
 	  bool isMissOutFirst = isMissOutHitFirst(simHits, ihit, (*tr));   
+	  bool isMissSimPrev  = isMissSimPrevLay (simHits, ihit);  
 	  //	  if (isMissOutHit(simHits, ihit, (*tr))) continue;   // only consider missing middle hits  
 	  
 	  bool foundMatchMod = false;  	    
@@ -660,6 +678,10 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	    continue;  
 	  } 
 
+	  HitSubdetLay subdetLay;
+	  subdetLay.subdet = getSubDet  (detid.rawId());  
+	  subdetLay.layer  = getLayerHit(detid.rawId());  
+	  simHitSubdetLay.push_back(subdetLay);  
 	  cout << "    " << nSimHit << ": " << detid.rawId()  
 	       << ", " << getGlobalPos(simHits.at(ihit)) 
 	       << ", subdet=" << detid.subdetId()
@@ -668,6 +690,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	       << ", isClus=" << isClusOnMod
 	       << ", isRecHitOnMod=" << isRecHitOnMod  
 	       << ", isGlued=" << isGlued  
+	       << ", isMissSimPrev=" << isMissSimPrev
 	       << endl; 
 
 
@@ -714,6 +737,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	    // if (isMissOutFirst && layerSim==5
 	    //    	&& getGlobalPos(simHits.at(ihit)).z()>0) {
 	      nHitMissOutFirst++;  
+	      if (isMissSimPrev) nHitMissOutFirstMissPrevSim++;    
 	      hPdgOuterHits->Fill(simHits.at(ihit).particleType());  
 	      hELossNRecOut->Fill(simHits.at(ihit).energyLoss());  
 	      hDistXMissOut->Fill(distEdgeXNorm);  
@@ -812,7 +836,9 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 		hTrkDPerpRecSimRecLayNotMod_NotGlued->Fill(distPerpSimToRec);  
 		hLayerRecLayNotMod_NotGlued->Fill(layerSim, detid.subdetId());  
 	      }
-
+	      if (!isRecHitOnMod) { 
+		hDistXYLayNotMod_NoRecHitOnMod->Fill(distEdgeXNorm, distEdgeYNorm);  
+	      }
 
 	      if (fabs(distPerpSimToRec) < 1.75) {
 		hTrkDPerpRecSimRecLayNotMod_PerpNear->Fill(distPerpSimToRec);  
@@ -849,6 +875,8 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	     << "; evt: " << event.id()
 	     << endl;  
 	
+	for (int ilay=1; ilay<=4; ilay++) { hNSimHitsVsLayerTIB->Fill(ilay, getCountSubdetLay(simHitSubdetLay, 3, ilay)); }  
+	for (int ilay=1; ilay<=6; ilay++) { hNSimHitsVsLayerTOB->Fill(ilay, getCountSubdetLay(simHitSubdetLay, 5, ilay)); }  
 	hNSimRecHitDiff->Fill(nSimHit - nRecHit);  
 
 	hNSimHit->Fill(nSimHit);
@@ -859,8 +887,11 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	hNRecoMissMid->Fill(nHitMissMidReco);  
 	hNRecoSimDiffMissOut->Fill(nHitMissOutReco - nHitMissOut);  
 	hNSimHitMissOutFirst->Fill(nHitMissOutFirst); 	  
+	hNSimHitMissOutFirstMissPrevSim->Fill(nHitMissOutFirstMissPrevSim); 	  
 	hNSimHitMissMid       ->Fill(nSimHit - nSimHitMatchMod); 	  
 	hNSimHitMissMidByLayer->Fill(nSimHit - nSimHitMatchLay);  
+	hNExtraSimHits->Fill(getNExtraSimHits(simHitSubdetLay));  
+	cout << "Debug:  found nextrahits = " << getNExtraSimHits(simHitSubdetLay) << endl;  
 	hNPixHit->Fill(nHitPix);  
 	if (nHitMissOut>0) {
 	  hTrkMissOutPt ->Fill(tr->pt());  
@@ -940,6 +971,32 @@ bool testTrackAssociator::isMissOutHit(const vector<PSimHit>& simHits, uint idxh
 
 }
 
+
+bool testTrackAssociator::isMissSimPrevLay(const vector<PSimHit>& simHits, uint idxhit) {
+  // Return whether there is a missing sim hit in the previous layer.
+
+  int layer = getLayerHit(simHits.at(idxhit).detUnitId());  
+  int subdet = getSubDet (simHits.at(idxhit).detUnitId());  
+  if (layer!=1) return (!isFoundSim(simHits, subdet, layer-1));  
+
+  // Now treat the first layer cases.  
+  if (subdet==3) return false;  // do not count missing pixel hits
+  if (subdet==5) return (!isFoundSim(simHits, 3, 4));  // return whether there is a sim hit in the last layer (4) of the TIB (subdet=3)  
+
+  cout << "WARNING [testTrackAssociator::isMissSimPrevLay]: Should not reach this point." << endl;  
+  return false;  
+
+}  
+
+bool testTrackAssociator::isFoundSim(const vector<PSimHit>& simHits, int subdet, int layer) {
+  // Return true if sim hit is found in the given subdet and layer
+  for (uint ihit=0; ihit<simHits.size(); ihit++) {  
+    int l = getLayerHit(simHits.at(ihit).detUnitId());  
+    int s = getSubDet  (simHits.at(ihit).detUnitId());  
+    if (l==layer && s==subdet) return true;
+  }
+  return false;
+}  
 
 bool testTrackAssociator::isMissOutHitFirst(const vector<PSimHit>& simHits, uint idxhit, const reco::Track tr) {
   // Return whether the given sim hit is the first missing outer hit, i.e., it is a missing outer hit and there are no missing outer hits before it.
@@ -1181,6 +1238,38 @@ bool testTrackAssociator::isRecHitOnModule(unsigned int rawId) {
   return false;
 
 }  
+
+int testTrackAssociator::getCountSubdetLay(const vector<HitSubdetLay>& simhits, int subdet, int layer) {
+  int nhits = 0;
+  for (uint ihit=0; ihit<simhits.size(); ihit++) {
+    if (simhits.at(ihit).subdet == subdet &&
+	simhits.at(ihit).layer  == layer)
+      nhits++;  
+  }
+  return nhits;
+} 
+
+
+int testTrackAssociator::getNExtraSimHits(const vector<HitSubdetLay>& simhits) {
+
+  int nextrahits = 0;  
+  // TIB
+  nextrahits += getCountSubdetLay(simhits, 3, 1) - 2;  
+  nextrahits += getCountSubdetLay(simhits, 3, 2) - 2;  
+  nextrahits += getCountSubdetLay(simhits, 3, 3) - 1;  
+  nextrahits += getCountSubdetLay(simhits, 3, 4) - 1;  
+  // TOB
+  nextrahits += getCountSubdetLay(simhits, 5, 1) - 2;  
+  nextrahits += getCountSubdetLay(simhits, 5, 2) - 2;  
+  nextrahits += getCountSubdetLay(simhits, 5, 3) - 1;  
+  nextrahits += getCountSubdetLay(simhits, 5, 4) - 1;  
+  nextrahits += getCountSubdetLay(simhits, 5, 5) - 1;  
+  nextrahits += getCountSubdetLay(simhits, 5, 6) - 1;  
+  
+  return nextrahits;  
+
+}
+
 
 // ------------ method called once each job just before starting event loop  ------------
 void

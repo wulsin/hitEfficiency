@@ -27,7 +27,7 @@ process.GlobalTag.globaltag = 'DESIGN53_V15::All'
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(10))
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring(
+                            #    fileNames = cms.untracked.vstring(
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV1/CMSSW_5_3_8_patch1/src/simTestMaskHits/H200ZZ4L_cfi_py_RAW2DIGI_RECO.root'
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/dataCopyFromGrid/WJetsLNuElecNoID/WJetsLNu_lumi541512.root'
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/simHToZZ/RECO_Ideal_DIGI_L1_DIGI2RAW_RAW2DIGI_L1Reco_RECO.root'
@@ -40,7 +40,13 @@ process.source = cms.Source("PoolSource",
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGunShift/SingleMuPt100_cfi_py_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO.root'
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_20.root', 
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_new.root',
-        )  
+        #        )  
+        ## fileNames = cms.untracked.vstring('file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_23.root'),  
+        ## eventsToProcess = cms.untracked.VEventRange('1:18','1:38','1:57','1:68','1:116','1:133','1:136','1:149','1:154','1:185'),  
+
+        fileNames = cms.untracked.vstring('file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_38.root'),  
+        eventsToProcess = cms.untracked.VEventRange('1:15', '1:55', '1:63', '1:72', '1:88', '1:89', '1:133', '1:192'),  
+
     )  
 
 
@@ -137,6 +143,25 @@ process.load("RecoTracker.FinalTrackSelectors.selectHighPurity_cfi")
 process.TFileService = cms.Service("TFileService",
     fileName = cms.string('outputDemo.root')
 )
+
+
+process.MessageLogger.categories     = [
+             ## "CkfPattern",
+             ## "TkStripMeasurementDet",
+             ## "CkfTrackCandidateMakerBase",
+             "TrackProducer",  
+             ]
+process.MessageLogger.debugModules   = [ "*" ]
+process.MessageLogger.cout = cms.untracked.PSet(
+    threshold = cms.untracked.string("DEBUG"),
+    INFO = cms.untracked.PSet( limit = cms.untracked.int32( 0 )),
+    DEBUG = cms.untracked.PSet( limit = cms.untracked.int32( 0 )),
+    ## CkfPattern                 = cms.untracked.PSet( limit = cms.untracked.int32( -1 )),
+    ## TkStripMeasurementDet      = cms.untracked.PSet( limit = cms.untracked.int32( -1 )),
+    ## CkfTrackCandidateMakerBase = cms.untracked.PSet( limit = cms.untracked.int32( -1 )),  
+    TrackProducer              = cms.untracked.PSet( limit = cms.untracked.int32( -1 )),  
+)
+
 
  
 
