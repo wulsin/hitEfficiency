@@ -21,6 +21,9 @@
 #include "DataFormats/Common/interface/DetSetVectorNew.h"
 
 #include "DataFormats/TrackReco/interface/Track.h"
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
+#include "TrackingTools/DetLayers/interface/NavigationSchool.h"
+
 
 #include <TFile.h>
 #include <TH1.h>
@@ -55,6 +58,8 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TrackAssociatorBase * associatorByHits;
   edm::InputTag tracksTag, tpTag, simtracksTag, simvtxTag;
 
+  edm::ESHandle<Propagator> thePropagator;  
+  edm::ESHandle<NavigationSchool> theSchool;  
   edm::ESHandle<TrackerGeometry> theG;
   edm::Handle<edmNew::DetSetVector<SiStripCluster> >  clusterStrip;
   edm::Handle<edmNew::DetSetVector<SiStripRecHit2D> >  rphiRecHits;
@@ -116,6 +121,7 @@ class testTrackAssociator : public edm::EDAnalyzer {
     double pt;
     double eta;
     double phi;
+    double posYLocalNormFirstMissOut;  
     vector<RecHitInfo> rechits;
     //    vector<uint> hitDetIds;
   };  
@@ -190,6 +196,8 @@ class testTrackAssociator : public edm::EDAnalyzer {
 
   TH2D* hLayerMid;  
   
+  TH1D* hDistYRecMod;  
+  TH1D* hDistYFirstMissOut;  
   TH1D* hDistXLayNotMod_PerpNear;
   TH1D* hDistYLayNotMod_PerpNear;
   TH2D* hDistXYLayNotMod_PerpNear;

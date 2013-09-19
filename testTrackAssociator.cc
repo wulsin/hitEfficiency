@@ -51,6 +51,9 @@
 #include "DataFormats/GeometrySurface/interface/TrapezoidalPlaneBounds.h" 
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"  
 
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
+
+
 #include <memory>
 #include <iostream>
 #include <string>
@@ -106,6 +109,9 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   hDistYMissOut = fs->make<TH1D>("hDistYMissOut",";y distance to sensor edge (cm);hits",100, -1.5, 1.5);  
   hDistYMissOut_YPos = fs->make<TH1D>("hDistYMissOut_YPos",";y distance to sensor edge (cm);hits",100, -1.5, 1.5);  
   hDistYMissOut_YNeg = fs->make<TH1D>("hDistYMissOut_YNeg",";y distance to sensor edge (cm);hits",100, -1.5, 1.5);  
+
+  hDistYRecMod = fs->make<TH1D>("hDistYRecMod",";y normalized local pos. (sim hit with rec hit on same module);hits",300, -1.5, 1.5);  
+  hDistYFirstMissOut = fs->make<TH1D>("hDistYFirstMissOut",";y normalized local pos. (first missing outer hit);hits",300, -1.5, 1.5);  
 
   hDistXLayNotMod_PerpNear = fs->make<TH1D>("hDistXLayNotMod_PerpNear",";x local pos. (norm)",100, -1.5, 1.5);  
   hDistYLayNotMod_PerpNear = fs->make<TH1D>("hDistYLayNotMod_PerpNear",";y local pos. (norm)",100, -1.5, 1.5);  
@@ -239,7 +245,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   event.getByLabel(simvtxTag, simVertexCollection);
   const SimVertexContainer simVC = *(simVertexCollection.product());
 
-  edm::Handle<TrackingParticleCollection>  TPCollectionH ;
+  edm::Handle<TrackingParticleCollection>  TPCollectionH;
   event.getByLabel(tpTag,TPCollectionH);
   const TrackingParticleCollection tPC   = *(TPCollectionH.product());
 
@@ -247,6 +253,14 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   // setup.get<CkfComponentsRecord>().get(measTkName,theMeasTk);
   edm::ESHandle<MeasurementTracker> theMeasTk;
   setup.get<CkfComponentsRecord>().get("", theMeasTk);  
+
+
+  setup.get<TrackingComponentsRecord>().get("RungeKuttaTrackerPropagator", thePropagator);
+  //  const Propagator* prop = &(*thePropagator);  // OK
+  //  cout << "propagator magneticField() = " << thePropagator->magneticField()->inTesla(GlobalPoint(0,0,0)).mag() << endl;   // 
+
+  setup.get<NavigationSchoolRecord>().get("SimpleNavigationSchool", theSchool);
+
 
   // extract tracker geometry
   //
@@ -474,6 +488,9 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   // First get positions of all the rec hits, and store them in a data structure.  
   vector<TrackAndHits> trkRecHits;  
 
+
+  NavigationSetter setter( *theSchool );   // Must create a local instance of this in order to do the propagation.  
+
   Handle<TrajTrackAssociationCollection> trajTrackAssociationHandle;
   event.getByLabel("TrackRefitter", trajTrackAssociationHandle);  
   const TrajTrackAssociationCollection& TrajToTrackMap = *trajTrackAssociationHandle.product();
@@ -521,10 +538,164 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
       newhit.eta = newTrk.eta;  // set the hit eta to the track eta 
       newhit.phi = newTrk.phi;  // set the hit phi to the track phi  
       newTrk.rechits.push_back(newhit);        
+    } // end loop over for(vector<TrajectoryMeasurement>::const_iterator it = measurements.begin(); it!=measurements.end(); it++){
+
+    //use negative sigma=-3.0 in order to use a more conservative definition of isInside() for Bounds classes.
+    Chi2MeasurementEstimator estimator(30.,-3.0);
+
+
+  // WARNING: At the moment the trajectories has the measurements with reversed sorting after the track smoothing. 
+  // Therefore the lastMeasurement is the inner one (for LHC-like tracks)
+    if (!traj->lastMeasurement().updatedState().isValid()) continue;  
+    FreeTrajectoryState*  outerState = traj->firstMeasurement().updatedState().freeState();    
+    TrajectoryStateOnSurface outerTSOS = traj->firstMeasurement().updatedState();
+    const DetLayer* outerLayer = traj->firstMeasurement().layer();
+    
+    if (!outerLayer) {
+      //means  that the trajectory was fit/smoothed in a special case: not setting those pointers
+      cout << "ERROR:  the trajectory was fit/smoothed in a special case: not setting those pointers.\n"
+	   <<" Filling the secondary hit patterns was requested. So I will bail out.";
+    }  
+    PropagationDirection dirForOuterLayers = alongMomentum;
+    //    PropagationDirection dirForOuterLayers = oppositeToMomentum;
+    std::vector< const DetLayer * > outerCompLayers = outerLayer->compatibleLayers(*outerState,dirForOuterLayers);
+    cout 
+      // << "inner DetLayer  sub: " 
+      // << innerLayer->subDetector() <<"\n"
+      << "Wells code:  outer DetLayer  sub: " 
+      << outerLayer->subDetector() << "\n" 
+      //      << ", position=" << outerLayer->position().x() << "\n"
+      // << "innerstate position rho: " << innerState->position().perp() << " z: "<< innerState->position().z()<<"\n"
+      // << "innerstate state pT: " << innerState->momentum().perp() << " pz: "<< innerState->momentum().z()<<"\n"
+      << "outerstate position rho: " << outerState->position().perp() << " z: "<< outerState->position().z()<<"\n"
+      << "outerstate state pT: " << outerState->momentum().perp() 
+      << ", eta=" << outerState->momentum().eta()
+      << ", phi=" << outerState->momentum().phi()
+      << " pz: "<< outerState->momentum().z() << "\n"
+      << ", dirForOuterLayers=" << dirForOuterLayers << "\n"  
+      //      << "innerLayers: " << innerCompLayers.size() << "\n"
+      << "outerLayers: " << outerCompLayers.size() << "\n";  
+
+    // std::vector< const DetLayer * > outerCompLayers = outerLayer->compatibleLayers(*outerState,dirForOuterLayers);
+    // cout 
+    //   << "Wells code:  "
+    //   << "outerLayer  sub: " << outerLayer->subDetector() << "\n"
+    //   << ", position=" << outerLayer->position()
+    //   << "outer DetLayer  sub: " 
+    //   << outerLayer->subDetector() << "\n" 
+    //   << "outerstate position rho: " << outerState->position().perp() 
+    //   << " z: "<< outerState->position().z()<<"\n" 
+    //   << "outerstate state momentum pT: " << outerState->momentum().perp()  
+    //   << ", eta=" << outerState->momentum().eta() 
+    //   << ", phi=" << outerState->momentum().phi() 
+    //   << " pz: "<< outerState->momentum().z() << "\n"
+    //   << ", dirForOuterLayers=" << dirForOuterLayers << endl 
+    //   << "outerLayers: " << outerCompLayers.size() << "\n";
+
+
+    // Copy example code from RecoTracker/TrackProducer/interface/TrackProducerBase.icc  
+    // First, get the innermost layer with a missing outer hit.  
+    bool isFirstMissOut = false;  
+    int firstLayer = 99;  
+    double posYLocalNormFirstMissOut = -99; // local y position of first missing outer hit   
+    for(vector<const DetLayer *>::const_iterator itLay=outerCompLayers.begin(); itLay!=outerCompLayers.end(); ++itLay) {
+      //      localProp->setPropagationDirection(alongMomentum);
+      vector< GeometricSearchDet::DetWithState > detWithState = (*itLay)->compatibleDets(outerTSOS,*thePropagator,estimator);
+      if(!detWithState.size()) continue;
+      DetId id = detWithState.front().first->geographicalId();
+      SiStripDetId strDetId = SiStripDetId(id.rawId());  
+      int layer = -1;  
+      if (strDetId.subDetector() == SiStripDetId::TIB) {  
+	TIBDetId tibid = TIBDetId(id.rawId());  
+	layer = tibid.layerNumber();  
+      } else if (strDetId.subDetector() == SiStripDetId::TOB) {  
+	TOBDetId tobid = TOBDetId(id.rawId());  
+	layer = tobid.layerNumber();  
+      }  
+      if (layer < firstLayer) firstLayer = layer;  
     }
+
+    for(vector<const DetLayer *>::const_iterator itLay=outerCompLayers.begin(); itLay!=outerCompLayers.end(); ++itLay){
+      if ((*itLay)->basicComponents().empty()){
+	//this should never happen. but better protect for itLay
+	edm::LogWarning("TrackProducer")<<"a detlayer with no components: I cannot figure out a DetId from this layer. please investigate.";
+	continue;
+      }
+      
+      //      localProp->setPropagationDirection(alongMomentum);
+      thePropagator->setPropagationDirection(alongMomentum);
+      //      vector< GeometricSearchDet::DetWithState > detWithState = (*itLay)->compatibleDets(outerTSOS,*localProp,estimator);
+      vector< GeometricSearchDet::DetWithState > detWithState = (*itLay)->compatibleDets(outerTSOS,*thePropagator,estimator);
+      if(!detWithState.size()) continue;
+      DetId id = detWithState.front().first->geographicalId();
+      //      const MeasurementDet* measDet = measTk->idToDet(id);	
+      const MeasurementDet* measDet = theMeasTk->idToDet(id);	
+      //if(measDet->isActive() && !measDet->hasBadComponents(detWithState.front().second)){	
+      if(measDet->isActive()){	  
+
+	//	TrajectoryStateOnSurface tsosMissOut = localProp->propagate(*outerState, measDet->surface());  
+	TrajectoryStateOnSurface tsosMissOut = thePropagator->propagate(*outerState, measDet->surface());  
+	LocalPoint HitLocalPos = tsosMissOut.localPosition();  
+	
+	double HalfWidth      = measDet->surface().bounds().width()  /2.0;  // in X direction  
+	double HalfLength     = measDet->surface().bounds().length() /2.0;  // in Y direction        
+	const TrapezoidalPlaneBounds* trapezoidalBounds( dynamic_cast<const TrapezoidalPlaneBounds*>(&(measDet->surface().bounds())));   
+	const RectangularPlaneBounds* rectangularBounds( dynamic_cast<const RectangularPlaneBounds*>(&(measDet->surface().bounds())));   
+	if (trapezoidalBounds) {  
+	  std::vector<float> const & parameters = (*trapezoidalBounds).parameters();
+	  HalfLength     = parameters[3];
+	  double t       = (HalfLength + HitLocalPos.y()) / (2*HalfLength) ; 
+	  HalfWidth      = parameters[0] + (parameters[1]-parameters[0]) * t;  
+	  //      cout << "Warning:  using trapezoidal bounds." << endl;  
+	} else if (!rectangularBounds) {
+	  cout << "Warning:  neither trapezoidal nor rectangular bounds found!" << endl;
+	  return; 
+	}       
+	
+	double distEdgeXNorm =  HitLocalPos.x() / HalfWidth;  
+	double distEdgeYNorm =  HitLocalPos.y() / HalfLength;  
+
+	SiStripDetId strDetId = SiStripDetId(id.rawId());  
+	int layer = -1;  
+	if (strDetId.subDetector() == SiStripDetId::TIB) {  
+	  TIBDetId tibid = TIBDetId(id.rawId());  
+	  layer = tibid.layerNumber();  
+	} else if (strDetId.subDetector() == SiStripDetId::TOB) {  
+	  TOBDetId tobid = TOBDetId(id.rawId());  
+	  layer = tobid.layerNumber();  
+	}  
+	isFirstMissOut = (firstLayer == layer);  
+	cout << "Wells code:  " 
+	  << "  miss. outer hit:"
+	  << "; subDetId= " <<  id.subdetId() 
+	  << "; layer= " <<  layer
+	  << "; x=" << HitLocalPos.x() 
+	  << "; y=" << HitLocalPos.y() 
+	  << "; dEdgeX= " << distEdgeXNorm
+	  << "; dEdgeY= " << distEdgeYNorm
+	  << "; HalfWidX= " << HalfWidth << "; HalfLenY= " << HalfLength 
+	  << " detId= " << id.rawId() << ",isActive=" << measDet->isActive() 
+	  << "(r,phi,z)=( " << measDet->position().perp() 
+	  << " , " << measDet->position().phi() 
+	  << " , " << measDet->position().z() 
+	  << " ), isFirstMissOut=" << isFirstMissOut  
+	  << endl;  	
+	if (isFirstMissOut) posYLocalNormFirstMissOut = distEdgeYNorm;  
+      } //       if(measDet->isActive()){	  
+    }  	//       for(vector<const DetLayer *>::const_iterator itLay=outerCompLayers.begin(); itLay!=outerCompLayers.end(); ++itLay){
+
+    newTrk.posYLocalNormFirstMissOut = posYLocalNormFirstMissOut;  
     trkRecHits.push_back(newTrk);  
 
-  }
+    cout << "For track with pt=" <<  itTrack->pt()
+	 << "; eta=" << itTrack->eta()
+	 << "; phi=" << itTrack->phi()
+	 << "; finding missing outer hits:" 
+	 << endl;
+    
+
+
+  }  // end loop over   for(TrajTrackAssociationCollection::const_iterator cit=TrajToTrackMap.begin(); 
 
   cout << "Printing reco tracks and rec hits." << endl;
   for (uint itrk=0; itrk<trkRecHits.size(); itrk++) {
@@ -659,9 +830,11 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	  //	  if (isMatchedToRecHitbyLayer(simHits.at(ihit), (*tr))) foundMatchLay = true;  // original 
 	  if (isMatchedToRecHitbyLayer(simHits.at(ihit), trkRecHits)) foundMatchLay = true;  
 	  RecHitInfo closestHit;
+	  TrackAndHits closestTrk;
 	  int nTrkMatch = 0;  
 	  for (uint itrk=0; itrk<trkRecHits.size(); itrk++) {
 	    if (deltaR(tr->eta(), tr->phi(), trkRecHits.at(itrk).eta, trkRecHits.at(itrk).phi) > 1.0) continue; 
+	    closestTrk = trkRecHits.at(itrk);  
 	    int idxMatch = findClosestRecHit(simHits.at(ihit), trkRecHits.at(itrk).rechits);
 	    if (idxMatch >= 0) { 
 	      closestHit = trkRecHits.at(itrk).rechits.at(idxMatch);  
@@ -682,6 +855,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	  subdetLay.subdet = getSubDet  (detid.rawId());  
 	  subdetLay.layer  = getLayerHit(detid.rawId());  
 	  simHitSubdetLay.push_back(subdetLay);  
+	  bool isFirstMissOutSim = isMissOut && isMissSimPrev;  
 	  cout << "    " << nSimHit << ": " << detid.rawId()  
 	       << ", " << getGlobalPos(simHits.at(ihit)) 
 	       << ", subdet=" << detid.subdetId()
@@ -691,6 +865,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	       << ", isRecHitOnMod=" << isRecHitOnMod  
 	       << ", isGlued=" << isGlued  
 	       << ", isMissSimPrev=" << isMissSimPrev
+	       << ", isFirstMissOutSim=" << isFirstMissOutSim  
 	       << endl; 
 
 
@@ -737,7 +912,10 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	    // if (isMissOutFirst && layerSim==5
 	    //    	&& getGlobalPos(simHits.at(ihit)).z()>0) {
 	      nHitMissOutFirst++;  
-	      if (isMissSimPrev) nHitMissOutFirstMissPrevSim++;    
+	      if (isMissSimPrev) { 
+		nHitMissOutFirstMissPrevSim++;    
+		hDistYFirstMissOut->Fill(closestTrk.posYLocalNormFirstMissOut);  
+	      } 
 	      hPdgOuterHits->Fill(simHits.at(ihit).particleType());  
 	      hELossNRecOut->Fill(simHits.at(ihit).energyLoss());  
 	      hDistXMissOut->Fill(distEdgeXNorm);  
@@ -780,6 +958,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	      hTrkDistRecSimRecMod->Fill(distSimToRec);  
 	      hLayerRecMod      ->Fill(layerSim, detid.subdetId());  
 	      hELossRecMod->Fill(energyLoss);        
+	      hDistYRecMod->Fill(distEdgeYNorm);  
 	      hPosRecMod->Fill(getGlobalPos(simHits.at(ihit)).z(), 
 			       getGlobalPos(simHits.at(ihit)).perp());  
 	      hPosRecModXY->Fill(getGlobalPos(simHits.at(ihit)).x(), 
@@ -931,6 +1110,9 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   // 	   <<  " matched to 0  reco::Tracks" << endl;
   //   }
   // }
+
+  // Debug:  Add lines at end of event
+  for (int i=0; i<200; i++) cout << endl;  
 
 }  // void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
