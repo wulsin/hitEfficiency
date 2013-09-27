@@ -157,7 +157,8 @@ testTrackAssociator::testTrackAssociator(edm::ParameterSet const& conf) {
   // hPdgRecHits = new TH1D("hPdgRecHits",";PDG ID of sim hit with associated rec hit",100,-50, 50);  
 
   hTrkEta                    = fs->make<TH1D>("hTrkEta",";#eta;tracks",100, -3, 3);  
-  hTrkPt                     = fs->make<TH1D>("hTrkPt", ";p_{T} (GeV);tracks",100, 50, 150);  
+  hTrkEtaAll                 = fs->make<TH1D>("hTrkEtaAll",";#eta;tracks (all)",100, -3, 3);  
+  hTrkPt                     = fs->make<TH1D>("hTrkPt", ";p_{T} (GeV);tracks",100, 0, 150);  
   hTrkDistRecSimRecMod       = fs->make<TH1D>("hTrkDistRecSimRecMod",      ";dist (sim hit-rec hit), (rec hit on same module) (cm)",100, 0, 6);  
   hTrkDistRecSimRecLay       = fs->make<TH1D>("hTrkDistRecSimRecLay",      ";dist (sim hit-rec hit), (rec hit on same layer) (cm)",100, 0, 6);  
   hTrkDistRecSimRecLayNotMod = fs->make<TH1D>("hTrkDistRecSimRecLayNotMod",";dist (sim hit-rec hit), (rec hit on same layer, not module) (cm)",100, 0, 5);  
@@ -492,13 +493,19 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
   NavigationSetter setter( *theSchool );   // Must create a local instance of this in order to do the propagation.  
 
   Handle<TrajTrackAssociationCollection> trajTrackAssociationHandle;
-  event.getByLabel("TrackRefitter", trajTrackAssociationHandle);  
+  //  event.getByLabel("TrackRefitter", trajTrackAssociationHandle);  
+  //  event.getByLabel("generalTracks", trajTrackAssociationHandle);  
+  event.getByLabel(tracksTag, trajTrackAssociationHandle);  
   const TrajTrackAssociationCollection& TrajToTrackMap = *trajTrackAssociationHandle.product();
   Handle<TrackCollection> tracks;
   event.getByLabel(tracksTag,tracks);
 
-  double minTrkPt = 90;  
+  //  double minTrkPt = 90;  
+  double minTrkPt = 15;  
+  double minTrkEta = 0.0;  
   double maxTrkEta = 0.8;  
+  // double minTrkEta = 0.8;  
+  // double maxTrkEta = 2.1;  
   int j=0;
   TrackCollection::const_iterator itTrack = tracks->begin();
   for(TrajTrackAssociationCollection::const_iterator cit=TrajToTrackMap.begin(); 
@@ -509,7 +516,8 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
     const edm::Ref<std::vector<Trajectory> > traj = cit->key;
 
     if (itTrack->pt() < minTrkPt) continue;  
-    if (fabs(itTrack->eta()) > maxTrkEta) continue;  
+    if (fabs(itTrack->eta()) > maxTrkEta ||
+	fabs(itTrack->eta()) < minTrkEta)  continue;  
 
     cout << "***********************************************************" << endl;  
 
@@ -596,25 +604,29 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
     // Copy example code from RecoTracker/TrackProducer/interface/TrackProducerBase.icc  
     // First, get the innermost layer with a missing outer hit.  
     bool isFirstMissOut = false;  
-    int firstLayer = 99;  
+    int firstLayer = 99;  // layer of first missing outer hit  
+    int firstsubdet = 99;  // subdet of first missing outer hit  
     double posYLocalNormFirstMissOut = -99; // local y position of first missing outer hit   
     for(vector<const DetLayer *>::const_iterator itLay=outerCompLayers.begin(); itLay!=outerCompLayers.end(); ++itLay) {
       //      localProp->setPropagationDirection(alongMomentum);
       vector< GeometricSearchDet::DetWithState > detWithState = (*itLay)->compatibleDets(outerTSOS,*thePropagator,estimator);
       if(!detWithState.size()) continue;
       DetId id = detWithState.front().first->geographicalId();
-      SiStripDetId strDetId = SiStripDetId(id.rawId());  
-      int layer = -1;  
-      if (strDetId.subDetector() == SiStripDetId::TIB) {  
-	TIBDetId tibid = TIBDetId(id.rawId());  
-	layer = tibid.layerNumber();  
-      } else if (strDetId.subDetector() == SiStripDetId::TOB) {  
-	TOBDetId tobid = TOBDetId(id.rawId());  
-	layer = tobid.layerNumber();  
-      }  
-      if (layer < firstLayer) firstLayer = layer;  
+      int layer = getLayerHit(id.rawId());  
+      int subdet = getSubDet (id.rawId());  
+      if (subdet < firstsubdet) {
+	firstLayer = layer;  
+	firstsubdet = subdet;  
+      } else {
+	if (subdet == firstsubdet && layer < firstLayer) {
+	  firstLayer = layer;  
+	  firstsubdet = subdet;  
+	}
+      }
     }
 
+    cout << "Debug:  firstLayer=" << firstLayer << ", firstsubdet=" << firstsubdet << endl;  
+    int nHitsMissOutRecoByHand = 0;  // my own counting of number of missing outer hits  
     for(vector<const DetLayer *>::const_iterator itLay=outerCompLayers.begin(); itLay!=outerCompLayers.end(); ++itLay){
       if ((*itLay)->basicComponents().empty()){
 	//this should never happen. but better protect for itLay
@@ -655,15 +667,8 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	double distEdgeXNorm =  HitLocalPos.x() / HalfWidth;  
 	double distEdgeYNorm =  HitLocalPos.y() / HalfLength;  
 
-	SiStripDetId strDetId = SiStripDetId(id.rawId());  
-	int layer = -1;  
-	if (strDetId.subDetector() == SiStripDetId::TIB) {  
-	  TIBDetId tibid = TIBDetId(id.rawId());  
-	  layer = tibid.layerNumber();  
-	} else if (strDetId.subDetector() == SiStripDetId::TOB) {  
-	  TOBDetId tobid = TOBDetId(id.rawId());  
-	  layer = tobid.layerNumber();  
-	}  
+	int layer = getLayerHit(id.rawId());  
+	nHitsMissOutRecoByHand++;  
 	isFirstMissOut = (firstLayer == layer);  
 	cout << "Wells code:  " 
 	  << "  miss. outer hit:"
@@ -692,6 +697,7 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	 << "; phi=" << itTrack->phi()
 	 << "; finding missing outer hits:" 
 	 << endl;
+    cout << "nHitsMissOutRecoByHand= " << nHitsMissOutRecoByHand << endl;  
     
 
 
@@ -746,9 +752,11 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
     TrackingParticleRef tp (TPCollectionH,i);
     try{ 
       std::vector<std::pair<RefToBase<Track>, double> > trackV = q[tp];
+      hTrkEtaAll->Fill(tp->eta());  
       if (tp->pt() < minTrkPt) continue;  // consider only 100 GeV tracks  
-      if (fabs(tp->eta()) > maxTrkEta) continue;  // consider tracks in barrel  
-      //      if (fabs(tp->eta()) > 2.5) continue;  // testing
+
+      if (fabs(tp->eta()) > maxTrkEta ||
+	  fabs(tp->eta()) < minTrkEta)  continue;  
       if (trackV.size() > 1) continue;  // consider only sim tracks matched to exactly one reco track 
       cout << "Sim Track " << setw(2) << tp.index() 
 	   << " pT: "  << setw(6) << tp->pt() 
@@ -802,6 +810,15 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	vector<HitSubdetLay> simHitSubdetLay;  
 	cout << "  Sim hits:  (total number: " << simHits.size() << ")" << endl;  
 
+	TrackAndHits closestTrk;
+	for (uint itrk=0; itrk<trkRecHits.size(); itrk++) {
+	  if (deltaR(tr->eta(), tr->phi(), trkRecHits.at(itrk).eta, trkRecHits.at(itrk).phi) > 1.0) continue; 
+	  closestTrk = trkRecHits.at(itrk);  
+	} 
+
+	bool trkIsMissOut = (tr->trackerExpectedHitsOuter().numberOfHits() > 0);  // whether the track has missing outer hits
+	bool trkIsMissOutGlueJoint = trkIsMissOut && (fabs(closestTrk.posYLocalNormFirstMissOut) < 0.02);  // if the track is missing outer hits, does the first strip pass through a glue joint
+
 	for (uint ihit=0; ihit<simHits.size(); ihit++) {  
 	  DetId detid = DetId(simHits.at(ihit).detUnitId());  
 	  if (detid.det() != DetId::Tracker) continue;  
@@ -830,11 +847,10 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	  //	  if (isMatchedToRecHitbyLayer(simHits.at(ihit), (*tr))) foundMatchLay = true;  // original 
 	  if (isMatchedToRecHitbyLayer(simHits.at(ihit), trkRecHits)) foundMatchLay = true;  
 	  RecHitInfo closestHit;
-	  TrackAndHits closestTrk;
 	  int nTrkMatch = 0;  
 	  for (uint itrk=0; itrk<trkRecHits.size(); itrk++) {
 	    if (deltaR(tr->eta(), tr->phi(), trkRecHits.at(itrk).eta, trkRecHits.at(itrk).phi) > 1.0) continue; 
-	    closestTrk = trkRecHits.at(itrk);  
+	    //	    closestTrk = trkRecHits.at(itrk);  
 	    int idxMatch = findClosestRecHit(simHits.at(ihit), trkRecHits.at(itrk).rechits);
 	    if (idxMatch >= 0) { 
 	      closestHit = trkRecHits.at(itrk).rechits.at(idxMatch);  
@@ -855,17 +871,22 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	  subdetLay.subdet = getSubDet  (detid.rawId());  
 	  subdetLay.layer  = getLayerHit(detid.rawId());  
 	  simHitSubdetLay.push_back(subdetLay);  
-	  bool isFirstMissOutSim = isMissOut && isMissSimPrev;  
+	  bool isFirstMissOutSim    = isMissOutFirst &&   isMissSimPrev;  // is the first missing outer hit, with a missing sim hit in the previous layer
+	  bool isFirstMissOutNotSim = isMissOutFirst && (!isMissSimPrev); // is the first missing outer hit, with a lost hit due to a bug
+	  bool isFirstMissOutGlueJoint = isMissOutFirst && (fabs(closestTrk.posYLocalNormFirstMissOut) < 0.02);  
 	  cout << "    " << nSimHit << ": " << detid.rawId()  
 	       << ", " << getGlobalPos(simHits.at(ihit)) 
 	       << ", subdet=" << detid.subdetId()
 	       << ", layer=" << getLayerHit(detid.rawId())  
 	       << ", isMissOut=" << isMissOut  
+	       << ", isMissOutFirst=" << isMissOutFirst
 	       << ", isClus=" << isClusOnMod
 	       << ", isRecHitOnMod=" << isRecHitOnMod  
-	       << ", isGlued=" << isGlued  
+	    //	       << ", isGlued=" << isGlued  
 	       << ", isMissSimPrev=" << isMissSimPrev
 	       << ", isFirstMissOutSim=" << isFirstMissOutSim  
+	       << ", isFirstMissOutNotSim=" << isFirstMissOutNotSim  
+	       << ", isFirstMissOutGlueJoint=" << isFirstMissOutGlueJoint  
 	       << endl; 
 
 
@@ -1053,7 +1074,13 @@ void testTrackAssociator::analyze(const edm::Event& event, const edm::EventSetup
 	     << "; no match by lay: " << nSimHit - nSimHitMatchLay  
 	     << "; evt: " << event.id()
 	     << endl;  
-	
+	cout << "nHitMissOutReco= " << nHitMissOutReco << endl;  
+	cout << "posYLocalNormFirstMissOut= " << closestTrk.posYLocalNormFirstMissOut << endl;  
+	cout << "Found on track: trkIsMissOut=" << trkIsMissOut
+	     << "; trkIsMissOutGlueJoint=" << trkIsMissOutGlueJoint
+	     << endl;  
+
+
 	for (int ilay=1; ilay<=4; ilay++) { hNSimHitsVsLayerTIB->Fill(ilay, getCountSubdetLay(simHitSubdetLay, 3, ilay)); }  
 	for (int ilay=1; ilay<=6; ilay++) { hNSimHitsVsLayerTOB->Fill(ilay, getCountSubdetLay(simHitSubdetLay, 5, ilay)); }  
 	hNSimRecHitDiff->Fill(nSimHit - nRecHit);  
@@ -1212,16 +1239,7 @@ bool testTrackAssociator::isMatchedToRecHitbyLayer(PSimHit& simHit, const vector
 
 bool testTrackAssociator::isMatchedToRecHitbyLayer(PSimHit& simHit, const vector<RecHitInfo>& recHits) {
   // Return true if rec hit is found in same layer as the simHit, within DeltaR<0.5.  
-
-  // DetId detid = DetId(simHit.detUnitId());  
-  // int subdetSim = detid.subdetId();  
-  // int layerSim = getLayerHit(simHit.detUnitId());  
-  // GlobalPoint globalPtSim = theG->idToDet(simHit.detUnitId())->surface().toGlobal(simHit.localPosition());  
-  // double etaSim = globalPtSim.eta(); 
-  // double phiSim = globalPtSim.phi();  
   bool foundMatch = false; 
-  // cout << "Debug:  checking isMatchedToRecHitbyLayer 001" 
-  // 	 << "; recHits size = " << recHits.size() << endl;  
   for (uint i=0; i<recHits.size(); i++) {
     if (isMatchedToRecHitbyLayer(simHit, recHits.at(i))) foundMatch = true;  
   }
@@ -1326,18 +1344,7 @@ double testTrackAssociator::getDist(GlobalPoint pt1, GlobalPoint pt2) {
 double testTrackAssociator::getDistPerp(GlobalPoint pt1, GlobalPoint pt2) {
   // Return perpendicular distance between two points.  
   // Return positive number if radius (pt2) > radius (pt1); negative otherwise.  
-  return pt2.perp() - pt1.perp();  
-
-  // GlobalVector vecDiff = pt1 - pt2; 
-  // double perp = fabs(vecDiff.perp()); 
-  // int sign;
-  // if (pt2.perp() > pt1.perp()) 
-  //   sign = +1; 
-  // else 
-  //   sign = -1;
-  // perp *= sign;  
-  // return perp;  
-  
+  return pt2.perp() - pt1.perp();    
 }
 
 GlobalPoint testTrackAssociator::getGlobalPos(PSimHit& simHit) {

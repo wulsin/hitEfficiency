@@ -214,6 +214,7 @@ class testTrackAssociator : public edm::EDAnalyzer {
   TH2D* hDistXYMissOut;  
 
   TH1D* hTrkEta;
+  TH1D* hTrkEtaAll;
   TH1D* hTrkPt;  
   TH1D* hTrkDistRecSimRecMod;
   TH1D* hTrkDistRecSimRecLay;
