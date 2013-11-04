@@ -19,16 +19,16 @@ process.load('Configuration/StandardSequences/MagneticField_AutoFromDBCurrent_cf
 
 ### Conditions
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
-#process.GlobalTag.globaltag = 'START53_V27::All'
-process.GlobalTag.globaltag = 'DESIGN53_V15::All'
-
+process.GlobalTag.globaltag = 'START53_V26::All'
+#process.GlobalTag.globaltag = 'DESIGN53_V15::All'
 
 
 #process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(10000))
 process.source = cms.Source("PoolSource",
-                            fileNames = cms.untracked.vstring(),  
-        #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV1/CMSSW_5_3_8_patch1/src/simTestMaskHits/H200ZZ4L_cfi_py_RAW2DIGI_RECO.root'
+                            #                            fileNames = cms.untracked.vstring(),  
+                            fileNames = cms.untracked.vstring(  
+                                #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV1/CMSSW_5_3_8_patch1/src/simTestMaskHits/H200ZZ4L_cfi_py_RAW2DIGI_RECO.root'
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/dataCopyFromGrid/WJetsLNuElecNoID/WJetsLNu_lumi541512.root'
         #                                'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/simHToZZ/RECO_Ideal_DIGI_L1_DIGI2RAW_RAW2DIGI_L1Reco_RECO.root'
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/SingleMuPt100_cfi_py_Ideal_RECO.root'  
@@ -40,7 +40,8 @@ process.source = cms.Source("PoolSource",
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGunShift/SingleMuPt100_cfi_py_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO.root'
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_20.root', 
         #        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_new.root',
-        #        )  
+        'file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV7TrackerVeto/CMSSW_5_3_3/src/SimTracker/VertexAssociation/test/eventsNoMu/pickevents_merged.root', 
+        )  
 
         ## fileNames = cms.untracked.vstring('file:/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/SingleMuPt100_cfi_py_Ideal_RECO_FEVT_23.root'),  
         ## eventsToProcess = cms.untracked.VEventRange('1:18','1:38','1:57','1:68','1:116','1:133','1:136','1:149','1:154','1:185'),  
@@ -51,10 +52,10 @@ process.source = cms.Source("PoolSource",
     )  
 
 
-dir = '/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/'
-for file in os.listdir(dir):
-    if file.find(".root") != -1:  # Skip over files that do not contain .root.  
-        process.source.fileNames.extend(cms.untracked.vstring('file:' + dir + file))    
+## dir = '/afs/cern.ch/user/w/wulsin/workspace/public/disappTrk/simStudyV2/CMSSW_5_3_3/src/muPartGun/batch/outputFEVT/'
+## for file in os.listdir(dir):
+##     if file.find(".root") != -1:  # Skip over files that do not contain .root.  
+##         process.source.fileNames.extend(cms.untracked.vstring('file:' + dir + file))    
 
 
 # Turn off duplicate checking for MC:  
@@ -101,7 +102,8 @@ process.load("SimTracker.TrackAssociation.TrackAssociatorByHits_cfi")
 
 
 process.TrackAssoc = cms.EDAnalyzer("testTrackAssociator",
-    tracksTag    = cms.InputTag("generalTracks"), 
+    tracksTag    = cms.InputTag("TrackRefitter"), 
+    #    tracksTag    = cms.InputTag("generalTracks"), 
     #    tpTag        = cms.InputTag("garbage"),
     tpTag        = cms.InputTag("mergedtruth", "MergedTrackTruth"),
     simtracksTag = cms.InputTag("g4SimHits"),
@@ -177,7 +179,10 @@ process.TFileService = cms.Service("TFileService",
 #process.p = cms.Path( process.selectHighPurity * process.TrackAssoc )  
 #process.p = cms.Path( process.selectHighPurity )  
 
-process.p = cms.Path(process.TrackRefitter + process.TrackAssoc)
+
+# In order to redo the TrackRefitting, often need to redo the pixel and strip rec hit reconstruction.  
+process.p = cms.Path(process.siPixelRecHits * process.siStripMatchedRecHits * process.trackingGlobalReco * process.TrackRefitter + process.TrackAssoc)
+#process.p = cms.Path(process.TrackRefitter + process.TrackAssoc)
 #process.p = cms.Path( process.TrackAssoc )  
 
 outfile = open('dumpedConfig.py','w'); print >> outfile,process.dumpPython(); outfile.close()
